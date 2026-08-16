@@ -79,17 +79,33 @@ static void draw_source_sprite(const wm_source_sprite *spr, int anchor_x, int an
 
     surface_t tex = surface_make_linear((void *)spr->pixels_ci8, FMT_CI8,
                                         spr->width, spr->height);
+
     rdpq_set_mode_standard();
     rdpq_mode_tlut(TLUT_RGBA16);
     rdpq_mode_filter(FILTER_POINT);
     rdpq_mode_alphacompare(1);
     rdpq_tex_upload_tlut(spr->palette_rgba5551, 0, spr->palette_colors);
-    rdpq_tex_blit(&tex, (float)anchor_x, (float)anchor_y,
-                  &(rdpq_blitparms_t){
-                      .cx = spr->xani,
-                      .cy = spr->yani,
-                      .flip_x = flip_x,
-                  });
+
+    /* r6h1: CI8 + TLUT has 2048 bytes of texture TMEM. Submit explicit
+       horizontal strips so each blit is guaranteed to fit in one TMEM load. */
+    int pitch = (spr->width + 7) & ~7;
+    int strip_h = pitch > 0 ? 2048 / pitch : 0;
+    if (strip_h < 1) strip_h = 1;
+    if (strip_h > 2) strip_h &= ~1;
+
+    for (int t = 0; t < spr->height; t += strip_h) {
+        int h = spr->height - t;
+        if (h > strip_h) h = strip_h;
+        rdpq_tex_blit(&tex, (float)anchor_x, (float)anchor_y,
+                      &(rdpq_blitparms_t){
+                          .t0 = t,
+                          .height = h,
+                          .cx = spr->xani,
+                          .cy = spr->yani - t,
+                          .flip_x = flip_x,
+                          .filtering = false,
+                      });
+    }
 }
 
 static void draw_shadow(int x, int y) {
@@ -184,7 +200,10 @@ static void render(const wm_demo *demo, bool connected, bool show_debug) {
     rdpq_text_print(NULL, 1, 8, 226,
                     connected ? "Move  Z+run  A punch  B kick  L AI  R reset  C-Up VM"
                               : "NO P1 PAD   CPU sandbox running   L AI  R reset");
-    rdpq_detach_show();
+
+    /* Do not let two heavy CI8 frames pile up behind display_get. */
+    rdpq_detach_wait();
+    display_show(disp);
 }
 
 int main(void) {
@@ -196,11 +215,13 @@ int main(void) {
     display_init(RESOLUTION_320x240, DEPTH_16_BPP, 2,
                  GAMMA_NONE, FILTERS_RESAMPLE);
     rdpq_init();
+    /* Validate RDP commands on this hardware-debug build. */
+    rdpq_debug_start();
     joypad_init();
     rdpq_text_register_font(1, rdpq_font_load_builtin(FONT_BUILTIN_DEBUG_VAR));
 
     wm_demo_init(&demo);
-    debugf("wm_arcade_port r6: two-wrestler fight sandbox booted\n");
+    debugf("wm_arcade_port r6h1: renderer hotfix booted\n");
     debugf("embedded source sprites: %u\n", (unsigned)wm_bret_sprite_count());
 
     while (1) {
