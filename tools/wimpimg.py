@@ -44,9 +44,7 @@ class ImageEntry:
     height: int
     palette_index_raw: int
     data_offset: int
-    pword1: int
-    pword2: int
-    pword3: int
+    tail_words: tuple[int, ...]
     directory_offset: int
 
 @dataclass(frozen=True)
@@ -115,14 +113,10 @@ def parse_images(data: bytes, header: WimpHeader) -> list[ImageEntry]:
             height=u16(data, off + 24),
             palette_index_raw=u16(data, off + 26),
             data_offset=u32(data, off + 28),
-            # WIMP image entries carry three private 16-bit words directly
-            # after the pixel-data pointer. WrestleMania's LOAD2 IHDR emits
-            # them as PWRD1/PWRD2/PWRD3. WWF's generated runtime header
-            # names the first two IANI2X/IANI2Y and uses them to place
-            # animation channel 2.
-            pword1=s16(data, off + 32),
-            pword2=s16(data, off + 34),
-            pword3=u16(data, off + 36),
+            # Preserve the complete unknown 18-byte image-entry tail.  r6h3
+            # incorrectly assumed its first three words were LOAD2 PWRD1/2/3.
+            # They are not: real HRT_WLK data disproved that assumption.
+            tail_words=tuple(s16(data, off + 32 + j * 2) for j in range(9)),
             directory_offset=off,
         )
         if entry.width == 0 or entry.height == 0:
@@ -264,7 +258,7 @@ def emit_c(path: pathlib.Path, data: bytes, images: list[ImageEntry], palettes: 
         pal = palette_for_image(im, images, palettes)
         lines.append(
             f'    {{"{im.name}", "{source_container}", {im.width}, {im.height}, {im.xani}, {im.yani}, '
-            f'{im.pword1}, {im.pword2}, {im.pword3}, px_{c_ident(im.name)}, '
+            f'{{' + ', '.join(str(v) for v in im.tail_words) + '}}, px_{c_ident(im.name)}, '
             f'pal_{c_ident(pal.name)}, {pal.color_count}}},'
         )
     lines += [
@@ -330,7 +324,7 @@ def main() -> int:
             pal = palette_for_image(e, images, palettes)
             print(
                 f"{e.name:8s} {e.width:4d}x{e.height:<4d} ani=({e.xani},{e.yani}) "
-                f"a2=({e.pword1},{e.pword2}) pieces={e.pword3} "
+                f"tail=[{' '.join(str(v) for v in e.tail_words)}] "
                 f"pal={pal.name}({pal.color_count}) data=0x{e.data_offset:X}"
             )
     return 0

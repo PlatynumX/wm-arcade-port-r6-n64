@@ -1,4 +1,4 @@
-# WWF WrestleMania Arcade portable C port — r6h3
+# WWF WrestleMania Arcade portable C port — r6h4
 
 N64-first, portable-core source translation experiment based on the original Midway WWF WrestleMania source tree.
 
@@ -48,7 +48,7 @@ ctest --test-dir build-host --output-on-failure
 
 ## N64 build
 
-The included GitHub Actions workflow installs the pinned libdragon SDK, fetches the historical source, regenerates translated animation tables, converts the needed Bret WIMP frames, builds `wm_arcade_r6h3.z64`, and publishes it on the quota-free `rom-build` branch.
+The included GitHub Actions workflow installs the pinned libdragon SDK, fetches the historical source, regenerates translated animation tables, converts the needed Bret WIMP frames, builds `wm_arcade_r6h4.z64`, and publishes it on the quota-free `rom-build` branch.
 
 Local N64 build requires a libdragon installation and `N64_INST`:
 
@@ -56,7 +56,7 @@ Local N64 build requires a libdragon installation and `N64_INST`:
 make -j2
 ```
 
-Output: `wm_arcade_r6h3.z64`
+Output: `wm_arcade_r6h4.z64`
 
 ## r6h2 hardware renderer hotfix
 
@@ -84,12 +84,18 @@ It also resolves near-perfect wrestler overlap in one tick so two identical
 Brets do not visually collapse into one sprite.
 
 
-## r6h3 original attachment-point compositor
+## r6h4 attachment-metadata scanner
 
 r6h2 proved the original second animation channel is required, but it drew that
-channel at the wrestler root and produced separated body pieces. r6h3 preserves
-WIMP PWRD1/PWRD2/PWRD3 metadata during conversion. WrestleMania's custom LOAD2
-header maps PWRD1/PWRD2 to IANI2X/IANI2Y; `ANIM.ASM::set_image` positions the
-secondary channel from those values. The N64 renderer now reproduces that
-per-primary-frame attachment delta, including horizontal mirroring, while retaining
-the r6h1 synchronous/TMEM-safe rendering path.
+channel at the wrestler root and produced separated body pieces. r6h3 then proved
+that treating raw WIMP entry bytes +32/+34 as the runtime IANI2X/IANI2Y values was
+wrong: the real HRT_WLK.IMG produced implausible values before the ROM build.
+
+r6h4 therefore stops guessing. The converter preserves all nine signed 16-bit
+words in the unknown 18-byte tail of every WIMP image-directory entry. On N64,
+C-Left/C-Right cycles each adjacent candidate pair and C-Down reverses the
+attachment-delta convention. The debug HUD shows the raw offsets and values live.
+The r6h1 synchronous/TMEM-safe renderer remains intact. Once a candidate assembles
+Bret correctly, that mapping can be locked into the portable converter; if none
+works, the evidence points to LOAD2 deriving PWRD values from another WIMP structure
+(such as point-table data) rather than copying raw image-entry words directly.
