@@ -68,6 +68,8 @@ static void test_ropes(void) {
 static void test_visual_sequences(void) {
     CHECK(wm_bret_stand2_anim.frame_count == 14);
     CHECK(wm_bret_stand4_anim.frame_count == 14);
+    CHECK(wm_bret_torso2_anim.frame_count == 6 && wm_bret_torso2_anim.repeat);
+    CHECK(wm_bret_torso4_anim.frame_count == 6 && wm_bret_torso4_anim.repeat);
     CHECK(wm_bret_walk2_f2_anim.frame_count == 16);
     CHECK(wm_bret_walk8_f2_anim.frame_count == 16);
     CHECK(wm_bret_walk4_f4_anim.frame_count == 16);
@@ -94,6 +96,7 @@ static void test_demo_four_way_and_run(void) {
     CHECK(d.p1.action == WM_DEMO_IDLE);
     CHECK(d.p1.facing == WM_DEMO_FACING_6);
     CHECK(d.p1.visual.sequence == &wm_bret_stand4_anim);
+    CHECK(d.p1.torso_visual.sequence == &wm_bret_torso4_anim);
 
     wm_input_state right = {.stick_x = 80};
     wm_demo_tick(&d, &right);
@@ -101,6 +104,7 @@ static void test_demo_four_way_and_run(void) {
     CHECK(d.p1.facing == WM_DEMO_FACING_6);
     CHECK(d.p1.flip_x);
     CHECK(d.p1.visual.sequence == &wm_bret_walk6_f4_anim);
+    CHECK(d.p1.torso_visual.sequence == &wm_bret_torso4_anim);
 
     wm_input_state left = {.stick_x = -80};
     wm_demo_tick(&d, &left);
@@ -115,6 +119,7 @@ static void test_demo_four_way_and_run(void) {
     CHECK(d.p1.facing == WM_DEMO_FACING_8);
     CHECK(d.p1.screen_y < y0);
     CHECK(d.p1.visual.sequence == &wm_bret_run_anim);
+    CHECK(d.p1.torso_visual.sequence == &wm_bret_torso2_anim);
 
     wm_input_state down = {.stick_y = -80};
     wm_demo_tick(&d, &down);

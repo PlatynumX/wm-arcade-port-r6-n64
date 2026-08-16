@@ -6,6 +6,9 @@
 /* Movement / stance streams from HRTSEQ1.ASM. */
 extern const wm_visual_sequence wm_bret_stand2_anim;
 extern const wm_visual_sequence wm_bret_stand4_anim;
+/* The arcade keeps a second, independently animated torso layer. */
+extern const wm_visual_sequence wm_bret_torso2_anim;
+extern const wm_visual_sequence wm_bret_torso4_anim;
 extern const wm_visual_sequence wm_bret_walk2_f2_anim;
 extern const wm_visual_sequence wm_bret_walk8_f2_anim;
 extern const wm_visual_sequence wm_bret_walk4_f4_anim;

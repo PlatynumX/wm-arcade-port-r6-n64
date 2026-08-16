@@ -60,12 +60,17 @@ static const wm_visual_sequence *sequence_for(const wm_demo_fighter *f) {
     return &wm_bret_stand2_anim;
 }
 
+static const wm_visual_sequence *torso_sequence_for(const wm_demo_fighter *f) {
+    return horizontal_facing(f->facing) ? &wm_bret_torso4_anim : &wm_bret_torso2_anim;
+}
+
 static void refresh_flip(wm_demo_fighter *f) {
     f->flip_x = f->facing == WM_DEMO_FACING_6;
 }
 
 static void set_action(wm_demo_fighter *f, wm_demo_action action) {
     const wm_visual_sequence *next;
+    const wm_visual_sequence *torso_next;
     f->action = action;
     refresh_flip(f);
     next = sequence_for(f);
@@ -74,6 +79,16 @@ static void set_action(wm_demo_fighter *f, wm_demo_action action) {
         if (action == WM_DEMO_PUNCH || action == WM_DEMO_KICK)
             f->attack_connected = false;
     }
+
+    /*
+     * Original WrestleMania is not a one-sprite wrestler here. Bret's init
+     * starts animation channel 1 with the stance and channel 2 with an
+     * independent H2TW2A/H4TW4A torso stream. Keep that second stream alive
+     * and direction-correct even while actions temporarily hide it.
+     */
+    torso_next = torso_sequence_for(f);
+    if (f->torso_visual.sequence != torso_next || f->torso_visual.ended)
+        wm_visual_start(&f->torso_visual, torso_next);
 }
 
 static bool is_attack(const wm_demo_fighter *f) {
@@ -182,16 +197,28 @@ static void tick_one_shot(wm_demo_fighter *f) {
 static void keep_fighters_separated(wm_demo_fighter *a, wm_demo_fighter *b) {
     int dx = b->screen_x - a->screen_x;
     int dy = b->screen_y - a->screen_y;
-    if (abs(dx) >= 18 || abs(dy) >= 10)
+    const int min_dx = 26;
+    const int min_dy = 13;
+    if (abs(dx) >= min_dx || abs(dy) >= min_dy)
         return;
+
+    /* r6h1 could leave the two identical Brets nearly perfectly superimposed,
+       which looked like one wrestler disappearing. Resolve the overlap in a
+       single tick instead of nudging one pixel per frame. */
     if (abs(dx) >= abs(dy)) {
-        int push = dx >= 0 ? 1 : -1;
-        a->screen_x = clamp_int(a->screen_x - push, RING_X_MIN, RING_X_MAX);
-        b->screen_x = clamp_int(b->screen_x + push, RING_X_MIN, RING_X_MAX);
+        int dir = dx >= 0 ? 1 : -1;
+        int need = min_dx - abs(dx);
+        int push_a = (need + 1) / 2;
+        int push_b = need / 2;
+        a->screen_x = clamp_int(a->screen_x - dir * push_a, RING_X_MIN, RING_X_MAX);
+        b->screen_x = clamp_int(b->screen_x + dir * push_b, RING_X_MIN, RING_X_MAX);
     } else {
-        int push = dy >= 0 ? 1 : -1;
-        a->screen_y = clamp_int(a->screen_y - push, RING_Y_MIN, RING_Y_MAX);
-        b->screen_y = clamp_int(b->screen_y + push, RING_Y_MIN, RING_Y_MAX);
+        int dir = dy >= 0 ? 1 : -1;
+        int need = min_dy - abs(dy);
+        int push_a = (need + 1) / 2;
+        int push_b = need / 2;
+        a->screen_y = clamp_int(a->screen_y - dir * push_a, RING_Y_MIN, RING_Y_MAX);
+        b->screen_y = clamp_int(b->screen_y + dir * push_b, RING_Y_MIN, RING_Y_MAX);
     }
 }
 
@@ -323,6 +350,12 @@ void wm_demo_tick(wm_demo *d, const wm_input_state *input) {
 
     tick_player(d, input);
     tick_cpu(d);
+
+    /* The arcade advances the second torso animation independently of the
+       primary leg/body stream. */
+    wm_visual_tick(&d->p1.torso_visual);
+    wm_visual_tick(&d->p2.torso_visual);
+
     keep_fighters_separated(&d->p1, &d->p2);
 
     resolve_attack(d, &d->p1, &d->p2);

@@ -86,21 +86,34 @@ static void draw_source_sprite(const wm_source_sprite *spr, int anchor_x, int an
     rdpq_mode_alphacompare(1);
     rdpq_tex_upload_tlut(spr->palette_rgba5551, 0, spr->palette_colors);
 
-    /* r6h1: CI8 + TLUT has 2048 bytes of texture TMEM. Submit explicit
-       horizontal strips so each blit is guaranteed to fit in one TMEM load. */
+    /*
+     * r6h1: do the CI8 TMEM split explicitly. CI8 + TLUT leaves 2048 bytes
+     * of texture TMEM. The generic large-texture blitter is supposed to split
+     * for us, but the two-wrestler hardware test showed missing upper strips
+     * followed by an RSP/display_get timeout. Keep each submitted blit inside
+     * one TMEM-sized horizontal strip so there is no long nested large-blit
+     * sequence for the RSP to drain.
+     */
     int pitch = (spr->width + 7) & ~7;
     int strip_h = pitch > 0 ? 2048 / pitch : 0;
-    if (strip_h < 1) strip_h = 1;
-    if (strip_h > 2) strip_h &= ~1;
+    if (strip_h < 1)
+        strip_h = 1;
+    /* Even-height strips keep all non-final T coordinates even, which also
+       gives the texture loader its cheapest path where possible. */
+    if (strip_h > 2)
+        strip_h &= ~1;
 
     for (int t = 0; t < spr->height; t += strip_h) {
         int h = spr->height - t;
-        if (h > strip_h) h = strip_h;
+        if (h > strip_h)
+            h = strip_h;
+
         rdpq_tex_blit(&tex, (float)anchor_x, (float)anchor_y,
                       &(rdpq_blitparms_t){
                           .t0 = t,
                           .height = h,
                           .cx = spr->xani,
+                          /* cx/cy are relative to the selected sub-rectangle. */
                           .cy = spr->yani - t,
                           .flip_x = flip_x,
                           .filtering = false,
@@ -119,14 +132,28 @@ static const wm_source_sprite *fighter_sprite(const wm_demo_fighter *f,
     return frame ? wm_bret_sprite_find(frame->source_frame) : NULL;
 }
 
+static bool fighter_uses_torso_layer(const wm_demo_fighter *f) {
+    /* HRTSEQ1 calls these the WALKING TORSOS. Bret's init also runs one while
+       standing. Attack/run composites are left alone until their secondary
+       animation semantics are translated. */
+    return f->action == WM_DEMO_IDLE || f->action == WM_DEMO_WALK;
+}
+
 static void draw_fighter(const wm_demo_fighter *f) {
     const wm_visual_frame *frame = NULL;
     const wm_source_sprite *spr = fighter_sprite(f, &frame);
-    (void)frame;
     draw_shadow(f->screen_x, f->screen_y);
-    if (spr)
+    if (spr) {
         draw_source_sprite(spr, f->screen_x, f->screen_y, f->flip_x);
-    else {
+
+        if (fighter_uses_torso_layer(f)) {
+            const wm_visual_frame *torso_frame = wm_visual_current(&f->torso_visual);
+            const wm_source_sprite *torso = torso_frame
+                ? wm_bret_sprite_find(torso_frame->source_frame) : NULL;
+            if (torso)
+                draw_source_sprite(torso, f->screen_x, f->screen_y, f->flip_x);
+        }
+    } else {
         fill_rect(f->screen_x - 10, f->screen_y - 48,
                   f->screen_x + 10, f->screen_y, RGBA32(230, 30, 150, 255));
     }
@@ -193,7 +220,7 @@ static void render(const wm_demo *demo, bool connected, bool show_debug) {
         draw_match_hud(demo);
     else {
         rdpq_set_mode_standard();
-        rdpq_text_print(NULL, 1, 8, 14, "WM ARCADE -> N64 r6   START: debug HUD");
+        rdpq_text_print(NULL, 1, 8, 14, "WM ARCADE -> N64 r6h2   START: debug HUD");
     }
 
     rdpq_set_mode_standard();
@@ -201,7 +228,13 @@ static void render(const wm_demo *demo, bool connected, bool show_debug) {
                     connected ? "Move  Z+run  A punch  B kick  L AI  R reset  C-Up VM"
                               : "NO P1 PAD   CPU sandbox running   L AI  R reset");
 
-    /* Do not let two heavy CI8 frames pile up behind display_get. */
+    /*
+     * Keep this hardware-debug build synchronous. r6 used detach_show(), which
+     * lets the CPU queue another frame while RSP/RDP are still chewing on the
+     * previous one. With two large CI8 wrestlers the real N64 eventually hit
+     * display_get's RSP wait timeout. Finish the frame before returning the
+     * framebuffer so queue backlog cannot accumulate.
+     */
     rdpq_detach_wait();
     display_show(disp);
 }
@@ -215,13 +248,13 @@ int main(void) {
     display_init(RESOLUTION_320x240, DEPTH_16_BPP, 2,
                  GAMMA_NONE, FILTERS_RESAMPLE);
     rdpq_init();
-    /* Validate RDP commands on this hardware-debug build. */
+    /* Enable the RDP command validator for this hardware-debug revision. */
     rdpq_debug_start();
     joypad_init();
     rdpq_text_register_font(1, rdpq_font_load_builtin(FONT_BUILTIN_DEBUG_VAR));
 
     wm_demo_init(&demo);
-    debugf("wm_arcade_port r6h1: renderer hotfix booted\n");
+    debugf("wm_arcade_port r6h2: two-layer Bret compositor booted\n");
     debugf("embedded source sprites: %u\n", (unsigned)wm_bret_sprite_count());
 
     while (1) {

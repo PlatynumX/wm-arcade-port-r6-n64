@@ -13,7 +13,7 @@ int main(void) {
 
     const wm_visual_frame *p1f = wm_visual_current(&demo.p1.visual);
     const wm_visual_frame *p2f = wm_visual_current(&demo.p2.visual);
-    printf("wm_arcade_port r6\n");
+    printf("wm_arcade_port r6h2\n");
     printf("target model: N64-first / portable-core\n");
     printf("source sequence=%s::%s words=%zu ended=%d mode=0x%04x\n",
            wm_source_hrt_finish1_move.source_file,
@@ -32,6 +32,6 @@ int main(void) {
            demo.game.scheduler.tick,
            (unsigned long long)demo.game.frame,
            demo.total_hits);
-    printf("portable two-wrestler runtime: PASS\n");
+    printf("portable two-layer two-wrestler runtime: PASS\n");
     return (demo.anim.ended && p1f && p2f) ? 0 : 1;
 }

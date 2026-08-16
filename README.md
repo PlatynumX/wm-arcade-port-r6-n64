@@ -57,3 +57,28 @@ make -j2
 ```
 
 Output: `wm_arcade_r6.z64`
+
+## r6h2 hardware renderer hotfix
+
+The first r6 real-hardware test exposed an RSP/display queue timeout while two
+large CI8 wrestler sprites were active. This hotfix keeps the game/core logic
+unchanged and changes only the N64 renderer:
+
+- explicit TMEM-sized CI8 horizontal strips
+- synchronous `rdpq_detach_wait()` + `display_show()` frame completion
+- `rdpq_debug_start()` validator enabled for hardware diagnosis
+
+The goal is to eliminate the missing upper sprite strips and the `display_get`
+RSP wait timeout before adding more gameplay systems.
+
+
+## r6h2 two-layer Bret fix
+
+The hardware captures showed that r6h1 fixed the RSP queue crash but not the
+missing upper body. The original source explains why: `bret_ani_init` starts
+`hrt_stand*_anim` with `change_anim1a` and independently starts
+`hrt_torso*_anim` with `change_anim2a`. In other words, standing/walking Bret
+is a two-animation composite. r6h2 carries both visual states in the portable
+core and RDP-composites the H2TW2A/H4TW4A torso layer over the primary frame.
+It also resolves near-perfect wrestler overlap in one tick so two identical
+Brets do not visually collapse into one sprite.

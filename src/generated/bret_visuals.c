@@ -51,6 +51,40 @@ const wm_visual_sequence wm_bret_stand4_anim = {
     .repeat = true,
 };
 
+static const wm_visual_frame bret_torso2_frames[] = {
+    {"H2TW2A01", 4},
+    {"H2TW2A02", 4},
+    {"H2TW2A03", 4},
+    {"H2TW2A04", 4},
+    {"H2TW2A03", 4},
+    {"H2TW2A02", 4},
+};
+
+const wm_visual_sequence wm_bret_torso2_anim = {
+    .source_file = "HRTSEQ1.ASM",
+    .source_label = "hrt_torso2_anim",
+    .frames = bret_torso2_frames,
+    .frame_count = sizeof(bret_torso2_frames) / sizeof(bret_torso2_frames[0]),
+    .repeat = true,
+};
+
+static const wm_visual_frame bret_torso4_frames[] = {
+    {"H4TW4A01", 4},
+    {"H4TW4A02", 4},
+    {"H4TW4A03", 4},
+    {"H4TW4A04", 4},
+    {"H4TW4A03", 4},
+    {"H4TW4A02", 4},
+};
+
+const wm_visual_sequence wm_bret_torso4_anim = {
+    .source_file = "HRTSEQ1.ASM",
+    .source_label = "hrt_torso4_anim",
+    .frames = bret_torso4_frames,
+    .frame_count = sizeof(bret_torso4_frames) / sizeof(bret_torso4_frames[0]),
+    .repeat = true,
+};
+
 static const wm_visual_frame bret_walk2_f2_frames[] = {
     {"H2WL2A01", 2},
     {"H2WL2A02", 2},

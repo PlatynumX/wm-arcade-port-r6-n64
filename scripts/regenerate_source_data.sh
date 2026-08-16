@@ -16,6 +16,8 @@ python3 "$ROOT/tools/wlanim.py" \
     --source "$ORIG/HRTSEQ1.ASM" \
     --sequence hrt_stand2_anim wm_bret_stand2_anim bret_stand2_frames \
     --sequence hrt_stand4_anim wm_bret_stand4_anim bret_stand4_frames \
+    --sequence hrt_torso2_anim wm_bret_torso2_anim bret_torso2_frames \
+    --sequence hrt_torso4_anim wm_bret_torso4_anim bret_torso4_frames \
     --sequence hrt_walk2_f2_anim wm_bret_walk2_f2_anim bret_walk2_f2_frames \
     --sequence hrt_walk8_f2_anim wm_bret_walk8_f2_anim bret_walk8_f2_frames \
     --sequence hrt_walk4_f4_anim wm_bret_walk4_f4_anim bret_walk4_f4_frames \

@@ -24,6 +24,7 @@ typedef enum {
 
 typedef struct {
     wm_visual_state visual;
+    wm_visual_state torso_visual;
     wm_demo_facing facing;
     wm_demo_action action;
     int screen_x;

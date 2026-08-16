@@ -27,6 +27,8 @@ def test_wlanim() -> None:
     p = ROOT / "tests" / "fixtures" / "HRTSEQ1_MIN.ASM"
     stand2 = wlanim.extract(p, "hrt_stand2_anim")
     stand4 = wlanim.extract(p, "hrt_stand4_anim")
+    torso2 = wlanim.extract(p, "hrt_torso2_anim")
+    torso4 = wlanim.extract(p, "hrt_torso4_anim")
     walk2 = wlanim.extract(p, "hrt_walk2_f2_anim")
     walk8 = wlanim.extract(p, "hrt_walk8_f2_anim")
     walk4 = wlanim.extract(p, "hrt_walk4_f4_anim")
@@ -37,6 +39,10 @@ def test_wlanim() -> None:
     assert stand2.frames[0].name == "H2ST2A05" and stand2.frames[3].ticks == 6
     assert stand4.repeat and len(stand4.frames) == 14
     assert stand4.frames[0].name == "H4ST4A02" and stand4.frames[6].ticks == 6
+    assert torso2.repeat and [f.name for f in torso2.frames] == [
+        "H2TW2A01", "H2TW2A02", "H2TW2A03", "H2TW2A04", "H2TW2A03", "H2TW2A02"
+    ]
+    assert torso4.repeat and torso4.frames[0].name == "H4TW4A01" and len(torso4.frames) == 6
     assert walk2.repeat and len(walk2.frames) == 16
     assert [f.ticks for f in walk2.frames[0:4]] == [2, 2, 2, 3]
     assert walk8.frames[0].name == "H2WL8A16" and walk8.frames[-1].name == "H2WL8A01"
