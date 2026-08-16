@@ -84,6 +84,8 @@ def synthetic_wimp(image_name: str = "H4ST4A01", palette_name: str = "HARTPAL") 
     data[off:off+len(raw_name)] = raw_name
     struct.pack_into("<hhHHHI", data, off + 18,
                      -1, 2, 3, 2, 5, 0x40)
+    # WIMP private words -> WWF PWRD1/PWRD2/PWRD3.
+    struct.pack_into("<hhH", data, off + 32, 7, 11, 2)
 
     poff = off + wimp.IMAGE_ENTRY_SIZE
     raw_pal = palette_name.encode("ascii")
@@ -101,6 +103,7 @@ def test_wimp_probe() -> None:
     assert entries[0].name == "H4ST4A01"
     assert entries[0].width == 3 and entries[0].height == 2
     assert entries[0].xani == -1 and entries[0].yani == 2
+    assert (entries[0].pword1, entries[0].pword2, entries[0].pword3) == (7, 11, 2)
     assert pals[0].name == "HARTPAL" and pals[0].color_count == 4
     assert wimp.read_palette_words(data, pals[0]) == [0, 0x7C00, 0x03E0, 0x001F]
     assert wimp.read_ci8(data, entries[0]) == bytes([1, 2, 3, 3, 2, 1])
@@ -118,7 +121,7 @@ def test_wimp_emit_c() -> None:
         out = pathlib.Path(td) / "bret_sprites.c"
         wimp.emit_c(out, data, entries, pals, ["H4ST4A01"], "hrt_wlk.img")
         text = out.read_text()
-        assert '"H4ST4A01", "hrt_wlk.img", 3, 2, -1, 2' in text
+        assert '"H4ST4A01", "hrt_wlk.img", 3, 2, -1, 2, 7, 11, 2' in text
         assert "0xF801" in text
         assert "__attribute__((aligned(8)))" in text
         assert "0x01, 0x02, 0x03, 0x03, 0x02, 0x01" in text

@@ -1,5 +1,5 @@
 # Primary target: Nintendo 64 / libdragon. Portable core remains libdragon-free.
-ROMNAME := wm_arcade_r6h2
+ROMNAME := wm_arcade_r6h3
 BUILD_DIR := build/n64
 
 ifeq ($(N64_INST),)
@@ -33,11 +33,11 @@ all: $(ROMNAME).z64
 assets: $(ASSET_C)
 
 $(ASSET_C): tools/wimpimg.py tools/bret_bundle.py tools/bret_manifest.py scripts/prepare_bret_sprites.sh src/generated/bret_visuals.c src/generated/bret_attacks.c
-	./scripts/prepare_bret_sprites.sh
+	sh ./scripts/prepare_bret_sprites.sh
 
 $(BUILD_DIR)/$(ROMNAME).elf: $(OBJS)
 
-$(ROMNAME).z64: N64_ROM_TITLE = "WM Arcade C Port r6h2"
+$(ROMNAME).z64: N64_ROM_TITLE = "WM Arcade C Port r6h3"
 $(ROMNAME).z64: N64_ROM_REGIONFREE = true
 
 clean:

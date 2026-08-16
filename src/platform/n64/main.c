@@ -150,8 +150,23 @@ static void draw_fighter(const wm_demo_fighter *f) {
             const wm_visual_frame *torso_frame = wm_visual_current(&f->torso_visual);
             const wm_source_sprite *torso = torso_frame
                 ? wm_bret_sprite_find(torso_frame->source_frame) : NULL;
-            if (torso)
-                draw_source_sprite(torso, f->screen_x, f->screen_y, f->flip_x);
+            if (torso && !(spr->ani2_x == -1 && spr->ani2_y == -1)) {
+                /* Original ANIM.ASM set_image math:
+                 *   a10 = primary.IANIOFFX - primary.IANI2X
+                 *   a11 += primary.IANIOFFY - primary.IANI2Y
+                 * then plot_object adds the secondary frame's own ANIX/ANIY.
+                 *
+                 * Our blitter uses ANIX/ANIY as the hotspot, so the equivalent
+                 * secondary hotspot is the fighter hotspot plus the primary
+                 * frame's attachment delta. Mirror that delta when facing left
+                 * because rdpq flip_x keeps the hotspot fixed.
+                 */
+                int dx = spr->ani2_x - spr->xani;
+                int dy = spr->ani2_y - spr->yani;
+                if (f->flip_x)
+                    dx = -dx;
+                draw_source_sprite(torso, f->screen_x + dx, f->screen_y + dy, f->flip_x);
+            }
         }
     } else {
         fill_rect(f->screen_x - 10, f->screen_y - 48,
@@ -199,6 +214,15 @@ static void draw_match_hud(const wm_demo *demo) {
              demo->p2.screen_x, demo->p2.screen_y, demo->p2.stun_ticks,
              demo->anim.ended ? "END" : "RUN", demo->restarts);
     rdpq_text_print(NULL, 1, 8, 44, line);
+
+    const wm_source_sprite *p1spr = fighter_sprite(&demo->p1, NULL);
+    if (p1spr) {
+        int dx = p1spr->ani2_x - p1spr->xani;
+        int dy = p1spr->ani2_y - p1spr->yani;
+        snprintf(line, sizeof(line), "src:%s a2:%d,%d d:%d,%d",
+                 p1spr->source_frame, p1spr->ani2_x, p1spr->ani2_y, dx, dy);
+        rdpq_text_print(NULL, 1, 8, 57, line);
+    }
 }
 
 static void render(const wm_demo *demo, bool connected, bool show_debug) {
@@ -220,7 +244,7 @@ static void render(const wm_demo *demo, bool connected, bool show_debug) {
         draw_match_hud(demo);
     else {
         rdpq_set_mode_standard();
-        rdpq_text_print(NULL, 1, 8, 14, "WM ARCADE -> N64 r6h2   START: debug HUD");
+        rdpq_text_print(NULL, 1, 8, 14, "WM ARCADE -> N64 r6h3   START: debug HUD");
     }
 
     rdpq_set_mode_standard();
@@ -254,7 +278,7 @@ int main(void) {
     rdpq_text_register_font(1, rdpq_font_load_builtin(FONT_BUILTIN_DEBUG_VAR));
 
     wm_demo_init(&demo);
-    debugf("wm_arcade_port r6h2: two-layer Bret compositor booted\n");
+    debugf("wm_arcade_port r6h3: source attachment-point compositor booted\n");
     debugf("embedded source sprites: %u\n", (unsigned)wm_bret_sprite_count());
 
     while (1) {

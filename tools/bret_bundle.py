@@ -83,6 +83,22 @@ def emit(out_path: pathlib.Path, lod: pathlib.Path, img_dir: pathlib.Path,
         pal = wimpimg.palette_for_image(im, images, palettes)
         resolved.append((frame, container, data, im, pal))
 
+    # These are known channel-1 frames used while the Bret torso animation is
+    # active. Their programmer words must contain a plausible channel-2 anchor.
+    # This is intentionally broad: it catches a wrong WIMP field offset without
+    # pretending we know the exact art dimensions ahead of time.
+    attach_samples = {"H4ST4A02", "H2ST2A05", "H4WL4A01", "H2WL1A01"}
+    for frame, _container, _data, im, _pal in resolved:
+        if frame not in attach_samples:
+            continue
+        if (im.pword1, im.pword2) == (-1, -1):
+            raise ValueError(f"{frame}: source frame has no channel-2 attachment point")
+        if abs(im.pword1) > 1024 or abs(im.pword2) > 1024:
+            raise ValueError(
+                f"{frame}: implausible PWRD1/PWRD2 attachment ({im.pword1},{im.pword2}); "
+                "WIMP private-word offsets need re-checking"
+            )
+
     lines = [
         "/* Auto-generated from the original Midway Bret WIMP containers. */",
         '#include "wm/bret_sprites.h"',
@@ -127,7 +143,7 @@ def emit(out_path: pathlib.Path, lod: pathlib.Path, img_dir: pathlib.Path,
         psym = palette_symbols[(container, pal.directory_offset)]
         lines.append(
             f'    {{"{frame}", "{container}", {im.width}, {im.height}, {im.xani}, {im.yani}, '
-            f'{pixel_symbols[frame]}, {psym}, {pal.color_count}}},'
+            f'{im.pword1}, {im.pword2}, {im.pword3}, {pixel_symbols[frame]}, {psym}, {pal.color_count}}},'
         )
     lines += [
         "};",
@@ -158,6 +174,25 @@ def main() -> int:
     ns = ap.parse_args()
     count, pixels = emit(ns.out, ns.lod, ns.img_dir, ns.visual_source)
     print(f"generated {ns.out}: {count} unique Bret frames, {pixels} CI8 pixels")
+    # Print a few primary frames so CI logs expose the original channel-2
+    # attachment metadata during the first real-source build.
+    try:
+        mapping = bret_manifest.parse_lod(ns.lod)
+        samples = ("H4ST4A02", "H2ST2A05", "H4WL4A01", "H2WL1A01")
+        cached = {}
+        for frame in samples:
+            container = mapping.get(frame)
+            if not container:
+                continue
+            if container not in cached:
+                path = resolve_case_insensitive(ns.img_dir, container)
+                _data, _hdr, imgs, _pals = wimpimg.parse_file(path)
+                cached[container] = {im.name.upper(): im for im in imgs}
+            im = cached[container].get(frame)
+            if im:
+                print(f"attach {frame}: ani=({im.xani},{im.yani}) a2=({im.pword1},{im.pword2}) p3={im.pword3}")
+    except Exception as exc:
+        print(f"attachment diagnostic unavailable: {exc}", file=sys.stderr)
     return 0
 
 

@@ -10,6 +10,11 @@ typedef struct {
     uint16_t height;
     int16_t xani;
     int16_t yani;
+    /* Original LOAD2 private words. WWF maps PWRD1/PWRD2 to the
+       secondary-animation attachment point (IANI2X/IANI2Y). */
+    int16_t ani2_x;
+    int16_t ani2_y;
+    uint16_t pword3;
     const uint8_t *pixels_ci8;
     /* N64-ready RGBA5551 TLUT. Entry 0 has alpha=0 for source transparency. */
     uint16_t *palette_rgba5551;

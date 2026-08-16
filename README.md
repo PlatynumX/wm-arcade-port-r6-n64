@@ -1,4 +1,4 @@
-# WWF WrestleMania Arcade portable C port — r6
+# WWF WrestleMania Arcade portable C port — r6h3
 
 N64-first, portable-core source translation experiment based on the original Midway WWF WrestleMania source tree.
 
@@ -48,7 +48,7 @@ ctest --test-dir build-host --output-on-failure
 
 ## N64 build
 
-The included GitHub Actions workflow installs the pinned libdragon SDK, fetches the historical source, regenerates translated animation tables, converts the needed Bret WIMP frames, builds `wm_arcade_r6.z64`, and publishes it on the quota-free `rom-build` branch.
+The included GitHub Actions workflow installs the pinned libdragon SDK, fetches the historical source, regenerates translated animation tables, converts the needed Bret WIMP frames, builds `wm_arcade_r6h3.z64`, and publishes it on the quota-free `rom-build` branch.
 
 Local N64 build requires a libdragon installation and `N64_INST`:
 
@@ -56,7 +56,7 @@ Local N64 build requires a libdragon installation and `N64_INST`:
 make -j2
 ```
 
-Output: `wm_arcade_r6.z64`
+Output: `wm_arcade_r6h3.z64`
 
 ## r6h2 hardware renderer hotfix
 
@@ -82,3 +82,14 @@ is a two-animation composite. r6h2 carries both visual states in the portable
 core and RDP-composites the H2TW2A/H4TW4A torso layer over the primary frame.
 It also resolves near-perfect wrestler overlap in one tick so two identical
 Brets do not visually collapse into one sprite.
+
+
+## r6h3 original attachment-point compositor
+
+r6h2 proved the original second animation channel is required, but it drew that
+channel at the wrestler root and produced separated body pieces. r6h3 preserves
+WIMP PWRD1/PWRD2/PWRD3 metadata during conversion. WrestleMania's custom LOAD2
+header maps PWRD1/PWRD2 to IANI2X/IANI2Y; `ANIM.ASM::set_image` positions the
+secondary channel from those values. The N64 renderer now reproduces that
+per-primary-frame attachment delta, including horizontal mirroring, while retaining
+the r6h1 synchronous/TMEM-safe rendering path.
