@@ -4,7 +4,7 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 ORIG="$ROOT/original/wwf-wrestlemania"
 if [ ! -f "$ORIG/ANIM.EQU" ] || [ ! -f "$ORIG/FINISEQ.ASM" ] || \
    [ ! -f "$ORIG/HRTSEQ1.ASM" ] || [ ! -f "$ORIG/HRTSEQ2.ASM" ]; then
-    "$ROOT/scripts/fetch_original.sh"
+    sh "$ROOT/scripts/fetch_original.sh"
 fi
 python3 "$ROOT/tools/asmseq.py" \
     --equ "$ORIG/ANIM.EQU" \

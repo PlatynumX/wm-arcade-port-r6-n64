@@ -5,10 +5,10 @@ ORIG="$ROOT/original/wwf-wrestlemania"
 LOD="$ORIG/IMG/BRET.LOD"
 OUT="$ROOT/src/generated/bret_sprites.c"
 if [ ! -f "$LOD" ]; then
-    "$ROOT/scripts/fetch_original.sh"
+    sh "$ROOT/scripts/fetch_original.sh"
 fi
 # Keep generated visual tables synchronized before discovering their artwork.
-"$ROOT/scripts/regenerate_source_data.sh"
+sh "$ROOT/scripts/regenerate_source_data.sh"
 python3 "$ROOT/tools/bret_bundle.py" \
     --lod "$LOD" \
     --img-dir "$ORIG/IMG" \

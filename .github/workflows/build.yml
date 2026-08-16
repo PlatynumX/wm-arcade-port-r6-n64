@@ -30,11 +30,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Fetch historical source and regenerate translated source data
-        run: ./scripts/regenerate_source_data.sh
+        run: sh ./scripts/regenerate_source_data.sh
       - name: Verify checked-in animation data is reproducible
         run: git diff --exit-code -- src/generated/finish_sequences.c src/generated/bret_visuals.c src/generated/bret_attacks.c
       - name: Convert real Bret WIMP frames to portable C
-        run: ./scripts/prepare_bret_sprites.sh
+        run: sh ./scripts/prepare_bret_sprites.sh
       - name: Compile generated sprite source on host
         run: cc -std=c11 -Wall -Wextra -Wpedantic -Werror -Iinclude -c src/generated/bret_sprites.c -o /tmp/bret_sprites.o
       - name: Show generated artwork footprint
@@ -86,8 +86,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ./scripts/regenerate_source_data.sh
-          ./scripts/prepare_bret_sprites.sh
+          sh ./scripts/regenerate_source_data.sh
+          sh ./scripts/prepare_bret_sprites.sh
           test -s src/generated/bret_sprites.c
 
       - name: Build Nintendo 64 ROM
